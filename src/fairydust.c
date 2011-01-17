@@ -519,7 +519,7 @@ void __fdust_init() {
 	
 	if(reserved_devices[0] == FDUST_RSV_NINIT) {
 		printf("%s starting up - %s\n", __FILE__, RELINFO);
-		printf("%s release git-%d, compiled with gcc-%s and cuda-%d at %d\n",        __FILE__, _GIT_LOG_COUNT, __VERSION__, CUDA_VERSION, _COMPILED_AT);
+		printf("%s release git-%d, compiled with gcc-%s and cuda-%d at %d\n",        __FILE__, 100+_GIT_LOG_COUNT, __VERSION__, CUDA_VERSION, _COMPILED_AT);
 		DMODE_INIT;
 		__fdust_lock_devices();
 		
