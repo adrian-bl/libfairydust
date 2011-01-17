@@ -510,9 +510,6 @@ void cublasInit() {
  * Initializes the library. This should get called by ALL functions
  * __fdust_init does..
  *  -> set the debug level
- *  -> check the signature of the in-memory-copy of the lib
- *  -> check the signature of the on-disc copy
- *  -> check the timebomb
  *  -> contact fairyd / lock devices
  */
 void __fdust_init() {

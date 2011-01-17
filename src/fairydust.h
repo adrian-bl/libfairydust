@@ -87,9 +87,7 @@ cl_uint _xxGetVirtualDevice(cl_uint i);
 cl_uint _xxGetFakedevFromClPtr(cl_device_id clptr);
 
 void *__cu_dlsym    (const char *func);                        /* dlsym helper                */
-void* XX_MALLOC     (size_t size);                             /* malloc() that dies on error */
 void _xxAddDeviceMapping(void *param_value, size_t malloced_bytes, cl_int real_dev, cl_int fake_dev);
-inline void XX_VERIFY();
 
 void __fdust_lock_devices();
 void __fdust_init();
