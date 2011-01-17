@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# fairydust     Start fairyd, neede by fairydust
+#
+# Written by   Adrian Ulrich <adrian@id.ethz.ch> for Brutus
+#
+# chkconfig: 2345 99 99
+# description: start fairyd for libfairydust
+# processname: fairyd.pl
+# config: /etc/fairyd.conf
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+RETVAL=0
+
+# See how we were called.
+case "$1" in
+  start)
+        # Start daemons.
+        echo -n "Starting fairyd: "
+        daemon /cluster/apps/cuda/fairydust/fairyd.pl -d
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/fairyd
+        echo
+        ;;
+  stop)
+        # Stop daemons.
+        echo -n "Shutting down fairyd: "
+        killproc fairyd.pl -15
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/fairyd
+        echo
+        ;;
+  status)
+	status fairyd
+	exit $?
+	;;
+  restart)
+	$0 stop
+	$0 start
+	;;
+  *)
+        echo "Usage: named {start|stop|status|restart}"
+        exit 1
+esac
+
+exit $RETVAL
+
