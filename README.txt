@@ -43,7 +43,7 @@ even know about it.
 Libfairydust solves this problem by simulating `fake-devices': If an application
 requests GPU#0, libfairydust can re-route all requests to some other GPU!
 This requires *NO* changes to existing applications: The application won't even
-now about this: libfairydust works 100% transparent.
+know about this: libfairydust works 100% transparent.
 
 
 
