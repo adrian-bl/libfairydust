@@ -50,6 +50,7 @@ package Adrian::Fairyd;
 	use Carp;
 	use POSIX qw(setsid ceil);
 	use IO::Socket;
+	use List::Util qw(shuffle);
 	use Data::Dumper;
 	
 	#############################################################
@@ -323,7 +324,13 @@ package Adrian::Fairyd;
 			
 			$local_gdevs = ceil($rcounter->{$self->{hostname}});
 			
-			$self->xlog("$lpid has $local_gdevs to play with");
+			$self->xlog("$lpid shall have $local_gdevs GPU(s) on this host.");
+			
+			# Copy of all free devices
+			my @free_list = $self->get_sorted_freedevs;
+			
+			$self->xlog("Smart list: ".join(",",@free_list));
+			$self->xlog("RandomList: ".join(",",keys(%{$self->{free}})));
 			
 			foreach my $devid (keys(%{$self->{free}})) {
 				last if int(keys(%$given_devs)) == $local_gdevs;
@@ -332,6 +339,40 @@ package Adrian::Fairyd;
 			$self->{used}->{$lpid} = $given_devs;
 		}
 		return keys(%{$self->{used}->{$lpid}});
+	}
+	
+	
+	#############################################################
+	# Return a 'smartly' sorted list of all (free) GPU devices
+	sub get_sorted_freedevs {
+		my($self) = @_;
+		
+		my $gpus_per_bus = 2;
+		my @free_list    = keys(%{$self->{free}});
+		my $buckets      = {};
+		my $bprio        = {};
+		my @result       = ();
+		
+		# Order devices by pci-slot
+		map{ push(@{$buckets->{int($_/$gpus_per_bus)}}, $_) } @free_list;
+		
+		# re-order by 'priority' (high = much free bandwidth)
+		map{ push(@{$bprio->{int(@{$buckets->{$_}})}}, delete($buckets->{$_})) } keys(%$buckets);
+		
+		
+		REDO:
+		foreach my $bsize (sort({$b<=>$a} keys(%$bprio))) {
+			my $this = delete($bprio->{$bsize});
+			for(my $i=0; $i<$bsize; $i++) {
+				foreach my $pair (shuffle(@$this)) {
+					push(@result,pop(@$pair));
+				}
+				push(@{$bprio->{$bsize-1}}, @$this);
+				goto REDO;
+			}
+		}
+		
+		return @result;
 	}
 	
 	
