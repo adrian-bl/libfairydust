@@ -49,7 +49,7 @@ know about this: libfairydust works 100% transparent.
 
 1.1 Great! How can i compile libfairydust?
 --------------------------------------------------
-Libfairydust has been tested with Cuda 3.2 and gcc 4.1.2 - 4.4.4 on x86_64 linux.
+Libfairydust has been tested with Cuda 3.2 and gcc 4.1.2 + 4.4.4 on x86_64 linux. Support for 32bit installations is currently not implemented.
 
 Compiling it is as easy as doing:
 
@@ -126,5 +126,8 @@ Brutus-Cluster of the ETH Zurich.
 
 Blabla: Fixme: Write more text :-)
 
+ - add startup workflow (connect to -> reply)
+ - protocol description
+ - testing implementation (use xterm as launcher?)
 
 
