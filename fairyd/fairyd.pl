@@ -332,7 +332,7 @@ package Adrian::Fairyd;
 			$self->xlog("Smart list: ".join(",",@free_list));
 			$self->xlog("RandomList: ".join(",",keys(%{$self->{free}})));
 			
-			foreach my $devid (keys(%{$self->{free}})) {
+			foreach my $devid (@free_list) {
 				last if int(keys(%$given_devs)) == $local_gdevs;
 				$given_devs->{$devid} = delete($self->{free}->{$devid});
 			}
