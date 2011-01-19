@@ -116,6 +116,17 @@ In this case libfairydust simulated a VIRTUAL (v) device 0.
 The REAL (h (hardware)) device for this virtual device is set to device 1
 
 
+`FDUST_ALLOCATE' also supports multiple GPUs: Setting it to
+ "0 3 2"
+ 
+ Will map:
+  The REAL GPU0 to the VIRTUAL GPU0
+  The REAL GPU3 to the VIRTUAL GPU1
+  The REAL GPU2 to the VIRTUAL GPU2
+
+Setting FDUST_ALLOCATE="@" will cause libfairydust to return all found GPUs
+
+
 
 2.2 Using fairyd (cluster installation)
 --------------------------------------------------
