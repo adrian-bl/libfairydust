@@ -543,13 +543,14 @@ void *__cu_dlsym(const char *func) {
  * Contact fairyd and allocate devices for current pid
  */
 void __fdust_lock_devices() {
-	
-	int sock, res, i, j;
-	char *outbuff;
-	char inchar[1];
-	char nvpath[PATH_MAX] = {0};
-	struct stat nvstat;
-	struct sockaddr_in nvd_addr;
+	int ngpu;                      /* Number of GPUs             */
+	char *env;                     /* FDUST_ALLOCATE env-pointer */
+	char *scratch;                 /* allocation-info to parse   */
+	char nvpath[PATH_MAX] = {0};   /* path to /dev/nvidiaX       */
+	struct stat nvstat;            /* stat struct                */
+	int i, x, sock;                /* scratch stuff              */
+	struct sockaddr_in f_addr;     /* fairyd addr                */
+	char inchar[1];                /* response buffer from fairyd*/
 	
 	DPRINT("allocating devices for pid %d\n", getpid());
 	
@@ -557,100 +558,103 @@ void __fdust_lock_devices() {
 	assert(reserved_devices[0] == FDUST_RSV_NINIT);
 	memset(reserved_devices, FDUST_RSV_END, sizeof(int)*MAX_GPUCOUNT);
 	
-	/* check hostname of local system */
+	/* count number of gpus. ngpu == 2 means: we got gpu 0 and 1 */
+	for(ngpu=0;ngpu<MAX_GPUCOUNT;ngpu++) {
+		sprintf(nvpath, "/dev/nvidia%d", ngpu);
+		if(stat(nvpath,&nvstat) != 0)
+			break;
+	}
+	assert(ngpu > 0); /* die if we didn't find any gpus (?!!) */
 	
-	if( getenv(FDUST_ALLOCATE) != NULL) {
+	
+	if( (env = getenv(FDUST_ALLOCATE)) != NULL) {
+		/* env was set but we cannot modify it: copy into scratch */
+		if( (scratch = malloc(strlen(env)+1)) != NULL )
+			memcpy(scratch,env,strlen(env)+1);
+	}
+	else {
+		/* must ask fairyd */
+		sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+		assert(sock >= 0);
+		memset(&f_addr, 0, sizeof(f_addr));
+		f_addr.sin_family = AF_INET;
+		f_addr.sin_port   = htons(NVD_PORT);
 		
-		/* there is no 'portable' (CUDART, cuda, OpenGL) way to get the number of 
-		   devices and at this point we have no idea if we are running within OpenGL
-		   or cuda. So the most simple trick is to simply count the device files */
-		   
-		for(j=0;j<MAX_GPUCOUNT;j++) {
-			sprintf(nvpath, "/dev/nvidia%d", j);
-			if(stat(nvpath,&nvstat) != 0)
+		x = inet_pton(AF_INET, NVD_HOST, &f_addr.sin_addr);
+		assert(x == 1);
+		
+		if(connect(sock, (const struct sockaddr *)&f_addr, sizeof(f_addr)) < 0) {
+			fprintf(stderr, "connection to fairyd failed: aborting\n");
+			exit(1);
+		}
+		
+		/* send allocate request */
+		asprintf(&scratch, "allocate %d\r\n", getpid());
+		x = send(sock, scratch, strlen(scratch), 0);
+		assert(x >= 0);
+		free(scratch);
+		
+		/* create an empty string */
+		if( (scratch = malloc(1)) == NULL )
+			abort();
+		scratch[0] = '\0';
+		
+		while( recv(sock, &inchar, 1, 0) == 1 ) {
+			if(*inchar < 32) {
 				break;
+			}
+			else {
+				if(realloc(scratch,1) == NULL)
+					abort();
+				
+				scratch[strlen(scratch)+1] = '\0';
+				scratch[strlen(scratch)]   = *inchar;
+			}
 		}
-		assert(j > 0); /* ooops? forgot to install the driver? ;-) */
-		
-		
-		/*
-		 * parse value from environment: < 0 = allocate all, everything else: allocate specific device
-		 * this will do nothing if FDUST_ALLOCATE is out of range: in this case, we will (likely) trigger
-		 * the assert() check below and die
-		*/
-		
-		i = atoi(getenv(FDUST_ALLOCATE));
-		
-		if(i < 0) {
-			for(i=0;i<j;i++)
-				reserved_devices[i] = i; /* just allocate all devices */
-		}
-		else if(i < j) {
-			reserved_devices[0] = i;
-		}
-		else {
-			RMSG("requested device not found\n"); /* -> bad luck, you will crash soon */
-		}
-		
-		goto CLEANUP;
-	}
-	/* else */
-	
-	/* create socket and connect */
-	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	  assert(sock >= 0);
-	memset(&nvd_addr, 0, sizeof(struct sockaddr_in));
-	nvd_addr.sin_family   = AF_INET;
-	nvd_addr.sin_port     = htons(NVD_PORT);
-	
-	res = inet_pton(AF_INET, NVD_HOST, &nvd_addr.sin_addr);
-	  assert(res == 1);
-	
-	if(connect(sock, (const struct sockaddr *)&nvd_addr, sizeof(struct sockaddr_in)) < 0) {
-		fprintf(stderr, "connection to fairyd failed: aborting\n");
-		exit(1);
+		close(sock);
+		DPRINT("fairyd reported: *%s*\n", scratch);
 	}
 	
-	/*
-	 * Send our own PID to nvd: This is blocking like hell but it doesn't make sense
-	 * to optimize this as we do this exactly once per process
-	 */
-	asprintf(&outbuff, "allocate %d\r\n", getpid());
+	/* scratch should now be a string such as '0 3 6\0' */
+	assert(scratch != NULL);
 	
-	res = send(sock, outbuff, strlen(outbuff), 0);
-	  assert(res >= 0);
+	i = 0; /* first virtual device number */
+	x = 1; /* do atoi() on next run       */
 	
-	/* Welcome to the most ugly parse code ever!
-	 * We expect:  ?<LEN><A><B>... (actually the server also sends \r\n but we don't care)
-	 * Example:    ?3\01\02\04
-	*/
-	for(i=-2; (i!=0 && recv(sock, &inchar, 1, 0)==1);) {
-		if( i == -2 ) { /* first run of loop -> should read '?' */
-			if(inchar[0] != '?')
-				break; /* wrong magic */
-			i=-1;
-		}
-		else if( i == -1 ) { /* second run -> contains number of elements */
-			i = inchar[0];
-		}
-		else if( i-- ) { /* an element -> add it */
-			reserved_devices[i] = inchar[0];
-		}
-		else { /* not reached */
-			assert(i>0);
-		}
+	/* special case -> allocate everything */
+	if(scratch[0] == '@') {
+		scratch[0] = '\0'; /* skip while loop */
+		for(i=0;i<ngpu;i++)
+			reserved_devices[i] = i;
+		DPRINT("allocated all (%d) devices as requested by environment settings\n",ngpu);
 	}
-	close(sock);
 	
-	CLEANUP:
-		assert(reserved_devices[0] != FDUST_RSV_END);
-		
-		for(i=0;i<MAX_GPUCOUNT;i++) {
-			if(reserved_devices[i] == FDUST_RSV_END)
-				break;
-			DPRINT("reserved_devices[fake_id=%d] = physical_id=%d\n", i, reserved_devices[i]);
+	while( scratch[0] != '\0' ) {
+		if(scratch[0] >= '0' && scratch[0] <= '9') {
+			if(x) {
+				if(i < ngpu && atoi(scratch) < ngpu) {
+					reserved_devices[i++] = atoi(scratch);
+				}
+				x=0;
+			}
+		}
+		else if(x==0) {
+			x=1;
 		}
 		
+		memmove(scratch, scratch+1, strlen(scratch)); 
+		memset(scratch+strlen(scratch),0,1);          
+	}
+	
+	
+	/* cleanup */
+	free(scratch);
+	assert(reserved_devices[0] != FDUST_RSV_END); /* die if we ended up with 0 allocated devices */
+	for(i=0;i<MAX_GPUCOUNT;i++) {
+		if(reserved_devices[i] == FDUST_RSV_END)
+			break;
+		DPRINT("reserved_devices[fake_id=%d] = physical_id=%d\n", i, reserved_devices[i]);
+	}
 }
 
 /*
