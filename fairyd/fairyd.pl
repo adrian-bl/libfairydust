@@ -202,9 +202,7 @@ package Adrian::Fairyd;
 	# Send device id's to remote
 	sub send_devices {
 		my($self,$ds,$devlist) = @_;
-		my $payload = '?'.pack("C",int(@$devlist));
-		   $payload .= join('',map(pack("C",$_),@$devlist))."\r\n";
-		$ds->write($payload);
+		$ds->write(join(" ",@$devlist)."\r\n");
 	}
 	
 	
