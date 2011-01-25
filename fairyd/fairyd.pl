@@ -309,7 +309,7 @@ package Adrian::Fairyd;
 			my $xenv         = $self->get_environment_of($lpid);
 			
 			if(defined($xenv)) {
-				$gpu_per_core = int(abs($xenv->{FDUST_GPU_PER_CORE}||0));
+				$gpu_per_core = (abs($xenv->{FDUST_GPU_PER_CORE}||0));
 				$xenv->{LSB_HOSTS} =~ tr/a-zA-Z0-9 //cd; # ??
 				@lsb_hosts    = split(/ /,$xenv->{LSB_HOSTS});
 			}
