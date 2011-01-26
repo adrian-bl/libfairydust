@@ -5,14 +5,14 @@ use Getopt::Long;
 #
 # Simple allocator daemon for  use with libfairydust
 #
-# (C) 2010 Adrian Ulrich
+# (C) 2010 Adrian Ulrich // ETHZ
 #
 # Version 0.98  - Initial release
 # Version 1.00  - Use syslog for $self->xlog output
 # Version 1.01  - Add Getopts and --daemon option
+# Version 1.02  - Use floats ;-) // Sort devices response
 
-
-my $VERSION = 1.01;
+my $VERSION = 1.02;
 my $getopts = {};
 GetOptions($getopts, "help|h", "version|v", "daemon|d") or exit 1;
 
@@ -336,7 +336,7 @@ package Adrian::Fairyd;
 			}
 			$self->{used}->{$lpid} = $given_devs;
 		}
-		return keys(%{$self->{used}->{$lpid}});
+		return sort(keys(%{$self->{used}->{$lpid}}));
 	}
 	
 	
