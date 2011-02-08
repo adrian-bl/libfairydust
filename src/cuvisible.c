@@ -14,8 +14,8 @@
 #include <stdarg.h>
 #include <dlfcn.h>
 
-#define BUFFER_OVERFLOWS_ARE_COOL  5                                       /* 255,\0 */
-#define TO_ALLOC                   MAX_GPUCOUNT*BUFFER_OVERFLOWS_ARE_COOL
+#define TO_ALLOC 2048
+
 
 void *(*libc_ioctl)() = NULL;  /* libc's version of ioctl      */
 char *newenv = NULL;           /* pointer for new ENV          */
@@ -33,30 +33,35 @@ const char *__fdust_mode() {
  */
 void __fdust_cuvisible_init() {
 	int rdevs[MAX_GPUCOUNT] = { FDUST_RSV_NINIT };
-	char xxx[BUFFER_OVERFLOWS_ARE_COOL];
 	int i;
 	
-	newenv = malloc(TO_ALLOC); /* This could be BIND8 code ;-) */
+	newenv = malloc(TO_ALLOC);
 	if(newenv == NULL)
 		abort();
 	
-	memset(newenv, 0, TO_ALLOC);             /* cleanup allocated memory...   */
-	strcat(newenv, "CUDA_VISIBLE_DEVICES="); /* ..and set the 'magic' keyword */
+	newenv[0] = '\0'; /* make sure we start with a null-byte for strncat() */
+	strncat(newenv, "CUDA_VISIBLE_DEVICES=", TO_ALLOC);
 	
-	__fdust_lock_devices(rdevs);             /* ask fairyd for devices        */
-	
-	for(i=0;i<MAX_GPUCOUNT;i++) {            /* ..and convert the response into a string */
+	__fdust_lock_devices(rdevs); /* ask fairyd for devices. This will have AT LEAST one dev */
+	for(i=0;i<MAX_GPUCOUNT;i++) {
 		if(rdevs[i] == FDUST_RSV_END)
-			break;
-		sprintf(xxx, "%d,",rdevs[i]);
-		strcat(newenv, xxx);
+			break; /* -> got all */
+		
+		snprintf(newenv+strlen(newenv), (TO_ALLOC-strlen(newenv)), "%d,",rdevs[i]);
 	}
 	
-	newenv[strlen(newenv)-1] = '\0';        /* remove last ','. this code is NOT reached if devs==0 */
-	i = putenv(newenv);
+	if(newenv[strlen(newenv)-1] == ',') {
+		newenv[strlen(newenv)-1] = '\0';
+	}
+	else {
+		RMSG("Shouldn't be here: panic!");
+		abort();
+	}
 	
+	i = putenv(newenv);
 	if(i)
 		abort();
+	
 }
 
 
