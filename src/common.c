@@ -7,6 +7,10 @@
  */
 
 #include "common.h"
+#include "pthread.h"
+
+#undef THREAD_HACK
+int th_hack = 0;
 
 /*
  * Printout build informations
@@ -28,9 +32,24 @@ void __fdust_lock_devices(int *rdevs) {
 	int i, x, sock;                /* scratch stuff              */
 	struct sockaddr_in f_addr;     /* fairyd addr                */
 	char inchar[1];                /* response buffer from fairyd*/
-	
 	DPRINT("allocating devices for pid %d\n", getpid());
 	
+#ifdef THREAD_HACK
+	printf(">> %d %d\n", getpid(), getppid());
+	if(++th_hack != 1) {
+		printf("Child! sleeping somewhat\n");
+		
+		while(rdevs[0] == FDUST_RSV_NINIT) {
+			usleep(100);
+		}
+		usleep(300);
+		return;
+	}
+	else {
+		RMSG("MASTER");
+	}
+#endif
+
 	/* Fill rdevs with END-Magic (= mark as inited) */
 	assert(rdevs[0] == FDUST_RSV_NINIT);
 	memset(rdevs, FDUST_RSV_END, sizeof(int)*MAX_GPUCOUNT);
