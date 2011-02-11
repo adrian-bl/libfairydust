@@ -370,6 +370,11 @@ package Adrian::Fairyd;
 			}
 		}
 		
+		if( int(keys(%{$self->{free}})) == 0 ) {
+			# don't be 'smart' if user allocated all GPUs
+			@result = sort {$a <=> $b} @result;
+		}
+		
 		return @result;
 	}
 	
