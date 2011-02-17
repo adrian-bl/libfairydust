@@ -249,7 +249,7 @@ package Adrian::Fairyd;
 			if(defined($this_name) && defined($this_ppid)) {
 				$self->xlog("ParentPid of ($this_name) $pid is $this_ppid");
 				
-				if($this_name eq 'res' or $this_name eq 'xterm') { # xterm -> debug on echelon
+				if($this_name eq 'res' or $this_name eq 'xterm' or $this_name =~ /^orted/ ) { # xterm -> debug on echelon
 					return $pid;
 				}
 				else {
