@@ -137,19 +137,31 @@ void lock_fdust_devices(int *rdevs, int opmode) {
 
 
 int _get_number_of_nvidia_devices() {
-	int ngpu;
-	char nvpath[PATH_MAX] = {0};   /* path to /dev/nvidiaX       */
-	struct stat nvstat;            /* stat struct                */
-	
-	for(ngpu=0;ngpu<MAX_GPUCOUNT;ngpu++) {
-		sprintf(nvpath, "/dev/nvidia%d", ngpu);
-		if(stat(nvpath,&nvstat) != 0)
-			break;
-	}
-	return ngpu;
+	return _get_number_of_sysfs_devices_whoa_this_function_name_is_too_long("/sys/bus/pci/drivers/nvidia");
 }
 
 int _get_number_of_ati_devices() {
-	printf("NOT IMPLEMENTED\n");
-	exit(1);
+	return _get_number_of_sysfs_devices_whoa_this_function_name_is_too_long("/sys/bus/pci/drivers/fglrx_pci");
+}
+
+int _get_number_of_sysfs_devices_whoa_this_function_name_is_too_long(char *path) {
+	
+	DIR           *dfh;
+	struct dirent *dent;
+	int           ngpu = 0;
+	
+	dfh = opendir(path);
+	if(dfh != NULL) {
+		for(;;) {
+			dent = readdir(dfh);
+			if(dent == NULL)
+				break;
+			
+			if(dent->d_type == DT_LNK && strlen(dent->d_name) == 12 && strncmp("0000:", dent->d_name, 5)==0)
+				ngpu++;
+		}
+		closedir(dfh);
+	}
+	printf("> %s: returning %d\n", __func__, ngpu);
+	return ngpu;
 }

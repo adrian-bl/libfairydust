@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <dirent.h>
 
 /* max. number of supported GPUs per system */
 #define MAX_GPUCOUNT 256
@@ -54,3 +55,4 @@ const char *__fdust_mode();
 void lock_fdust_devices(int *rdevs, int opmode);
 int _get_number_of_nvidia_devices();
 int _get_number_of_ati_devices();
+int _get_number_of_sysfs_devices_whoa_this_function_name_is_too_long(char *path);
