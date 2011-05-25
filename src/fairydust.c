@@ -514,7 +514,7 @@ void __fdust_init() {
 	
 	if(reserved_devices[0] == FDUST_RSV_NINIT) {
 		__fdust_spam();
-		__fdust_lock_devices(reserved_devices);
+		lock_fdust_devices(reserved_devices, FDUST_MODE_NVIDIA);
 		
 		printf("%s allocated gpu-count: %d device(s)\n", __FILE__, _xxGetNumberOfLockedDevices());
 		

@@ -42,7 +42,7 @@ void __fdust_cuvisible_init() {
 	newenv[0] = '\0'; /* make sure we start with a null-byte for strncat() */
 	strncat(newenv, "CUDA_VISIBLE_DEVICES=", TO_ALLOC);
 	
-	__fdust_lock_devices(rdevs); /* ask fairyd for devices. This will have AT LEAST one dev */
+	lock_fdust_devices(rdevs, FDUST_MODE_NVIDIA); /* ask fairyd for devices. This will have AT LEAST one dev */
 	for(i=0;i<MAX_GPUCOUNT;i++) {
 		if(rdevs[i] == FDUST_RSV_END)
 			break; /* -> got all */

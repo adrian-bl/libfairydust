@@ -111,7 +111,7 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceInfo(cl_device_id device_id   
 void __atidust_init() {
 	if(reserved_devices[0] == FDUST_RSV_NINIT) {
 		__fdust_spam();
-		__fdust_lock_devices(reserved_devices, num_ati_devices);
+		lock_fdust_devices(rdevs, FDUST_MODE_ATI);
 		printf("%s allocated gpu-count: %d device(s)\n", __FILE__, _xxGetNumberOfLockedDevices());
 	}
 }
