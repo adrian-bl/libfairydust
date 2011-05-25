@@ -7,7 +7,6 @@
  */
 
 #include "common.h"
-#include "pthread.h"
 
 /*
  * Printout build informations
@@ -20,28 +19,30 @@ void __fdust_spam() {
 /*
  * Read our ENV or contact fairyd
  */
-void __fdust_lock_devices(int *rdevs) {
-	int ngpu;                      /* Number of GPUs             */
+void lock_fdust_devices(int *rdevs, int opmode) {
 	char *env;                     /* FDUST_ALLOCATE env-pointer */
 	char *scratch;                 /* allocation-info to parse   */
-	char nvpath[PATH_MAX] = {0};   /* path to /dev/nvidiaX       */
-	struct stat nvstat;            /* stat struct                */
 	int i, x, sock;                /* scratch stuff              */
 	struct sockaddr_in f_addr;     /* fairyd addr                */
 	char inchar[1];                /* response buffer from fairyd*/
+	int ngpu = 0;                  /* number of detected GPUs    */
 	DPRINT("allocating devices for pid %d\n", getpid());
+	
+	switch(opmode) {
+		case FDUST_MODE_NVIDIA:
+			ngpu = _get_number_of_nvidia_devices();
+			break;
+		case FDUST_MODE_ATI:
+			ngpu = _get_number_of_ati_devices();
+			break;
+		default:
+			break; // will panic
+	}
 	
 	/* Fill rdevs with END-Magic (= mark as inited) */
 	assert(rdevs[0] == FDUST_RSV_NINIT);
 	memset(rdevs, FDUST_RSV_END, sizeof(int)*MAX_GPUCOUNT);
-	
-	/* count number of gpus. ngpu == 2 means: we got gpu 0 and 1 */
-	for(ngpu=0;ngpu<MAX_GPUCOUNT;ngpu++) {
-		sprintf(nvpath, "/dev/nvidia%d", ngpu);
-		if(stat(nvpath,&nvstat) != 0)
-			break;
-	}
-	assert(ngpu > 0); /* die if we didn't find any gpus (?!!) */
+	assert(ngpu > 0);
 	
 	
 	if( (env = getenv(FDUST_ALLOCATE)) != NULL) {
@@ -132,4 +133,23 @@ void __fdust_lock_devices(int *rdevs) {
 			break;
 		DPRINT("rdevs[fake_id=%d] = physical_id=%d\n", i, rdevs[i]);
 	}
+}
+
+
+int _get_number_of_nvidia_devices() {
+	int ngpu;
+	char nvpath[PATH_MAX] = {0};   /* path to /dev/nvidiaX       */
+	struct stat nvstat;            /* stat struct                */
+	
+	for(ngpu=0;ngpu<MAX_GPUCOUNT;ngpu++) {
+		sprintf(nvpath, "/dev/nvidia%d", ngpu);
+		if(stat(nvpath,&nvstat) != 0)
+			break;
+	}
+	return ngpu;
+}
+
+int _get_number_of_ati_devices() {
+	printf("NOT IMPLEMENTED\n");
+	exit(1);
 }
