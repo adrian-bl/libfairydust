@@ -1,6 +1,7 @@
 Welcome to libfairydust!
 
 libfairydust is a wrapper around NVIDIAs cuda and OpenCL implementation.
+AMDs `stream' (APP) OpenCL implementation is also supported
 
 Report bugs and problems to <adrian@blinkenlights.ch>
 
@@ -61,6 +62,15 @@ Compiling it is as easy as doing:
 (Note: The makefile expects to find all cuda headers at
  /usr/local/cuda/include OR/AND at $(CUDA_INSTALL_PATH)/include)
 
+
+To compile an AMD-Compatible version run:
+ $ cd libfairydust/src
+ $ make atidust
+
+ This should produce a file called ./obj/libatidust.so.0
+ (Note: The rest of this documentation will talk about
+  `libfairydust.so.0' - the ati version works in exactly
+  the same way - just replace the library name when needed)
 
 
 2.0 How to use libfairyudst
