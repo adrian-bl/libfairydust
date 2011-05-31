@@ -162,6 +162,6 @@ int _get_number_of_sysfs_devices_whoa_this_function_name_is_too_long(char *path)
 		}
 		closedir(dfh);
 	}
-	printf("> %s: returning %d\n", __func__, ngpu);
+	DPRINT("> %s: returning %d\n", __func__, ngpu);
 	return ngpu;
 }
