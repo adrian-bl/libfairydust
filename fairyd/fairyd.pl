@@ -71,21 +71,11 @@ package Adrian::Fairyd;
 		
 		my $nvport = delete($args{Port}) or $self->panic("No Port argument!");
 		$self->xlog("Scanning and locking nvidia devices and bind()'ing to port $nvport");
-		for(my $i=0; $i<=0xFF; $i++) {
-			my $nvdev = "/dev/nvidia$i";
-			last unless -e $nvdev; # hit end
-			
-			my $hr = { fh=>undef, id=>$i, devname=>$nvdev };
-			open($hr->{fh}, $nvdev) or next;
-			
-			if(flock($hr->{fh}, LOCK_EX|LOCK_NB)) {
-				$self->xlog("+ managing $nvdev");
-				$self->register_device($hr);
-			}
-			else {
-				$self->xlog("- skipping $nvdev ($!)");
-				close($hr->{fh});
-			}
+		
+		my $i=0;
+		foreach my $dirent (sort {$a<=>$b} (glob("/sys/bus/pci/drivers/nvidia/*"),glob("/sys/bus/pci/drivers/fglrx_pci/*"))) {
+			next unless $dirent =~ /0000:[^\/]+$/;
+			$self->register_device({ id=>$i++, sysfs=>$dirent });
 		}
 		
 		my $sock = IO::Socket::INET->new(LocalPort=>$nvport, LocalAddr=>'127.0.0.1', Listen=>256, Proto=>'tcp', ReuseAddr=>1) 
@@ -209,13 +199,13 @@ package Adrian::Fairyd;
 	#############################################################
 	# add new item to freelist
 	sub register_device {
-		my($self, $what) = @_;
+		my($self, $xref) = @_;
 		
-		my $id = $what->{id};
+		my $id = $xref->{id};
 		$self->panic("No id!")                 unless defined $id;
 		$self->panic("Duplicate id $id!")      if exists($self->{free}->{$id});
 		$self->panic("id $id marked as used!") if exists($self->{used}->{$id});
-		$self->{free}->{$id} = $what;
+		$self->{free}->{$id} = $xref;
 	}
 	
 	

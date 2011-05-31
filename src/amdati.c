@@ -1,6 +1,6 @@
 /*
  *
- *  Hijack some Cuda and OpenCL API-Calls
+ *  Re-Implementation of ATI/AMD's 'stream' clGetDeviceIDs call
  *
  * (C) 2010-2011 Adrian Ulrich / ETHZ
  *
@@ -98,7 +98,7 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
 void _atidust_init() {
 	if(reserved_devices[0] == FDUST_RSV_NINIT) {
 		__fdust_spam();
-		lock_fdust_devices(reserved_devices, FDUST_MODE_ATI); /* FIXME: _ATI */
+		lock_fdust_devices(reserved_devices, FDUST_MODE_ATI);
 		printf("%s allocated gpu-count: %d device(s)\n", __FILE__, _get_locked_gpu_count());
 	}
 }
