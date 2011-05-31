@@ -17,13 +17,9 @@ cl_device_id ocl_ptrcache[MAX_GPUCOUNT]  = { -1 };               /* map between 
 
 
 
-cl_uint _xxGetNumberOfLockedDevices();
-cl_uint _xxGetPhysicalDevice(cl_uint i);
-cl_uint _xxGetVirtualDevice(cl_uint i);
-cl_uint _xxGetFakedevFromClPtr(cl_device_id clptr);
-
-void _xxAddDeviceMapping(void *param_value, size_t malloced_bytes, cl_int real_dev, cl_int fake_dev);
-void __atidust_init();
+cl_uint _get_phys_from_virtual(cl_uint virtual_i);
+cl_uint _get_locked_gpu_count();
+void _atidust_init();
 
 
 extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform    , cl_device_type device_type,

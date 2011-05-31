@@ -27,95 +27,79 @@ const char *__fdust_mode() {
 /*
  * Emulate clGetDeviceIDs
 */
+
 extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform    , cl_device_type device_type,
                                                       cl_uint        num_entries , cl_device_id *devices,
                                                       cl_uint        *num_devices) {
 	
-	static void * (*ati_gdi) ();           /* libOpenCL's version of clGetDeviceIDs    */
-	cl_uint internal_num_devices;          /* number of (all) hw-devices               */
-	cl_device_id *internal_devices;        /* will hold the IDs of ALL devices         */
-	cl_int nv_return, lock_cnt, i, foo;
+	static void     *(*ati_gdi) ();                      /* libOpenCL's version of clGetDeviceIDs */
+	cl_uint         locked_gpus;                         /* number of GPUs we can use             */
+	cl_uint         rval                 = 0;            /* return value of dlsym() calls         */
+	cl_uint         i                    = 0;            /* generic loop counter                  */
+	cl_uint         scratch_matched_devs = 0;
+	cl_device_id    scratch_handout_devs[MAX_GPUCOUNT];
+	cl_uint         total_matched_devs   = 0;
+	cl_device_id    total_handout_devs[MAX_GPUCOUNT];
 	
 	/* init call to libOpenCL */
 	if(!ati_gdi)
 		ati_gdi = (void *(*) ()) dlsym(RTLD_NEXT, __func__);
 	
-	/* init libfairydust and get number of useable devices */
-	__atidust_init(); /* fixme: thread safe! */
-	lock_cnt = _xxGetNumberOfLockedDevices();
+	_atidust_init();
+	locked_gpus = _get_locked_gpu_count();
 	
-	/* Get the number of physical devices */
-	nv_return = ati_gdi(platform, device_type, NULL, NULL, &internal_num_devices);
+	DPRINT("caller set device_type to %08X\n", device_type);
 	
-	assert( nv_return == CL_SUCCESS );          /* this shouldn't fail in any case */
-	assert( lock_cnt > 0 );                     /* could we lock anything ? */
-	assert( internal_num_devices >= lock_cnt ); /* Did we lock too many devices (??!) */
+	if(platform == NULL && (rval = CL_OUT_OF_HOST_MEMORY)) /* platform shall NOT be null! */
+		goto CLEANUP;
 	
 	
-	/* caller wants to know how many devices matched -> fixup the result */
+	if(device_type & CL_DEVICE_TYPE_GPU) {
+		rval = ati_gdi(platform, CL_DEVICE_TYPE_GPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
+		if(rval != CL_SUCCESS)
+			goto CLEANUP;
+		for(i=0;i<locked_gpus;i++) {
+			rval = _get_phys_from_virtual(i);
+			assert(rval < scratch_matched_devs);
+			total_handout_devs[total_matched_devs++] = scratch_handout_devs[rval];
+		}
+	}
+	
+	/* cpu should be after GPUs - stream does it like this */
+	if(device_type & CL_DEVICE_TYPE_CPU) {
+		rval = ati_gdi(platform, CL_DEVICE_TYPE_CPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
+		if(rval != CL_SUCCESS)
+			goto CLEANUP;
+		
+		for(i=0;i<scratch_matched_devs;i++) {
+			total_handout_devs[total_matched_devs++] = scratch_handout_devs[i];
+		}
+		
+	}
+	
+	
 	if(num_devices != NULL)
-		*num_devices = lock_cnt;
+		*num_devices = total_matched_devs;
 	
-	DPRINT("Hardware has %d physical devices, returning %d (num_devices=%p)\n", internal_num_devices, lock_cnt, num_devices);
-	
-	/* caller (also) want's to actually get a list of devices */
-	if(num_entries > 0 && devices != NULL) {
-		
-		if( num_entries > lock_cnt) { /* Caller requested more devices than available, well: we don't care */
-			num_entries = lock_cnt;
-		}
-		
-		internal_devices = (cl_device_id *)malloc(internal_num_devices*sizeof(cl_device_id));
-		if(!internal_devices)
-			return CL_OUT_OF_HOST_MEMORY;
-		
-		nv_return = ati_gdi(platform, device_type, internal_num_devices, internal_devices, NULL);
-		if(nv_return != CL_SUCCESS)
-			return nv_return;
-		
-		DPRINT("We got %d devices, caller requested %d of them\n", internal_num_devices, num_entries);
-		
+	if(devices != NULL && num_entries > 0) {
 		for(i=0;i<num_entries;i++) {
-			foo = _xxGetPhysicalDevice(i);
-			assert( foo >= 0 );
-			ocl_ptrcache[i] = devices[i] = internal_devices[foo]; // fake info for caller
-			DPRINT("physical_device=%d, fake_device=%d, pointer=%p, want=%d\n", foo, i, internal_devices[foo], num_entries);
+			if(i>=total_matched_devs)
+				break;
+			devices[i] = total_handout_devs[i];
 		}
 	}
 	
-	return nv_return;
-}
-
-/*
- * Emulate clGetDeviceInfo -> just add the fdust: tag to the name
-*/
-extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceInfo(cl_device_id device_id     , cl_device_info param_name,
-                                                      size_t param_value_size    , void *param_value,
-                                                      size_t *param_value_size_ret) {
 	
-	static void * (*nv_gdx) ();            /* libOpenCL's version of clGetDeviceInfo    */
-	cl_int gdx_return;
-	
-	if(!nv_gdx)
-		nv_gdx = (void *(*) ()) dlsym(RTLD_NEXT, __func__);
-	
-	__atidust_init();
-	
-	gdx_return = nv_gdx(device_id, param_name, param_value_size, param_value, param_value_size_ret);
-	
-	if(gdx_return == CL_SUCCESS && param_name == CL_DEVICE_NAME) {
-		param_value_size_ret = NULL; // requests caller to ignore and was set to NULL in Cuda 3.2RC anyway...
-		_xxAddDeviceMapping(param_value, param_value_size, _xxGetPhysicalDevice(_xxGetFakedevFromClPtr(device_id)), _xxGetFakedevFromClPtr(device_id));
-	}
-	return gdx_return;
+	CLEANUP:
+		return rval;
 }
 
 
-void __atidust_init() {
+void _atidust_init() {
 	if(reserved_devices[0] == FDUST_RSV_NINIT) {
 		__fdust_spam();
-		lock_fdust_devices(reserved_devices, FDUST_MODE_ATI);
-		printf("%s allocated gpu-count: %d device(s)\n", __FILE__, _xxGetNumberOfLockedDevices());
+		lock_fdust_devices(reserved_devices, FDUST_MODE_ATI); /* FIXME: _ATI */
+		printf("%s allocated gpu-count: %d device(s)\n", __FILE__, _get_locked_gpu_count());
 	}
 }
 
@@ -124,7 +108,7 @@ void __atidust_init() {
 /*
  * Returns the PHYSICAL device id of given fakedev
  */
-cl_uint _xxGetPhysicalDevice(cl_uint virtual_i) {
+cl_uint _get_phys_from_virtual(cl_uint virtual_i) {
 	cl_int result;
 	
 	assert(virtual_i < MAX_GPUCOUNT);
@@ -137,30 +121,11 @@ cl_uint _xxGetPhysicalDevice(cl_uint virtual_i) {
 }
 
 
-/*
- * Returns the FAKEID for given physical device
- */
-cl_uint _xxGetVirtualDevice(cl_uint physical_i) {
-	cl_uint i;
-	
-	DPRINT("physical_i=%d\n",physical_i);
-	
-	assert(physical_i < MAX_GPUCOUNT);
-	for(i=0;i<MAX_GPUCOUNT;i++) {
-		if(reserved_devices[i] == physical_i)
-			return i;
-		if(reserved_devices[i] < 0)
-			break;
-	}
-	
-	/* reached on error */
-	assert(0);
-}
 
 /*
  * Returns the number of locked devices
  */
-cl_uint _xxGetNumberOfLockedDevices() {
+cl_uint _get_locked_gpu_count() {
 	cl_uint i;
 	for(i=0;i<MAX_GPUCOUNT;i++) {
 		if(reserved_devices[i] == FDUST_RSV_END)
@@ -168,36 +133,3 @@ cl_uint _xxGetNumberOfLockedDevices() {
 	}
 	return -1;
 }
-
-/*
- * Takes an OpenCL device pointer and returns the FAKEDEV for it
- */
-cl_uint _xxGetFakedevFromClPtr(cl_device_id clptr) {
-	cl_int i=0;
-	
-	for(i=0;i<MAX_GPUCOUNT;i++) {
-		if(ocl_ptrcache[i] == clptr)
-			return i;
-	}
-	
-	RMSG("Ooops! shouldn't be here -> somehow ocl_ptrcache got messed up?!");
-	abort();
-	return 0; // make gcc happy!
-}
-
-/*
- * Includes some debug infos in the device description
- */
-void _xxAddDeviceMapping(void *param_value, size_t malloced_bytes, cl_int real_dev, cl_int fake_dev) {
-	char fdust_devname[STREAM_DEVNAME_LEN] = {0};
-	
-	sprintf(fdust_devname, " - fdust{v:h}={%u:%u}", fake_dev, real_dev);
-	
-	if( (strlen(param_value)+strlen(fdust_devname)) < malloced_bytes ) {
-		memcpy(param_value+strlen(param_value), fdust_devname, strlen(fdust_devname)+1); // +1 = include \0 of sprintf()
-	}
-
-}
-
-
-
