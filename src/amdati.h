@@ -12,9 +12,6 @@
 #define STREAM_DEVNAME_LEN 255 /* fixme */
 
 int reserved_devices[MAX_GPUCOUNT]       = { FDUST_RSV_NINIT };  /* map of reserved devices */
-cl_device_id ocl_ptrcache[MAX_GPUCOUNT]  = { -1 };               /* map between fakedev <-> ocl_pointer device */
-
-
 
 
 cl_uint _get_phys_from_virtual(cl_uint virtual_i);

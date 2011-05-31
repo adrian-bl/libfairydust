@@ -48,14 +48,12 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
 	_atidust_init();
 	locked_gpus = _get_locked_gpu_count();
 	
-	DPRINT("caller set device_type to %08X\n", device_type);
-	
 	if(platform == NULL && (rval = CL_OUT_OF_HOST_MEMORY)) /* platform shall NOT be null! */
 		goto CLEANUP;
 	
 	
 	if(device_type & CL_DEVICE_TYPE_GPU) {
-		rval = ati_gdi(platform, CL_DEVICE_TYPE_GPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
+		rval = (long int)ati_gdi(platform, CL_DEVICE_TYPE_GPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
 		if(rval != CL_SUCCESS)
 			goto CLEANUP;
 		for(i=0;i<locked_gpus;i++) {
@@ -67,7 +65,7 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
 	
 	/* cpu should be after GPUs - stream does it like this */
 	if(device_type & CL_DEVICE_TYPE_CPU) {
-		rval = ati_gdi(platform, CL_DEVICE_TYPE_CPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
+		rval = (long int)ati_gdi(platform, CL_DEVICE_TYPE_CPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
 		if(rval != CL_SUCCESS)
 			goto CLEANUP;
 		
