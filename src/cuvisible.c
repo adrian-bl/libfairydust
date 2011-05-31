@@ -84,10 +84,10 @@ int ioctl(int fd, unsigned long rq, ...) {
 		if(newenv == NULL && rq == 0xc04846d2) { /* aah, the sweet sweet smell of cuda... */
 			__fdust_cuvisible_init();
 		}
-		return libc_ioctl(fd,rq,argp);
+		return (long int)libc_ioctl(fd,rq,argp);
 	}
 	else {
-		return libc_ioctl(fd,rq);
+		return (long int)libc_ioctl(fd,rq);
 	}
 	
 	/* not reached */
