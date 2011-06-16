@@ -293,21 +293,26 @@ package Adrian::Fairyd;
 			
 			my $given_devs   = {};
 			my $gpu_per_core = 0;
+			my $gpu_cnt_total= 0;
 			my @lsb_hosts    = ();
 			my $rcounter     = {};
 			my $local_gdevs  = 0;
 			my $xenv         = $self->get_environment_of($lpid);
 			
 			if(defined($xenv)) {
-				$gpu_per_core = (abs($xenv->{FDUST_GPU_PER_CORE}||0));
+				$gpu_per_core = (abs($xenv->{FDUST_GPU_PER_CORE}||0));  # requested GPUs *per core*
+				$gpu_cnt_total= (abs($xenv->{FDUST_GPU_CNT_TOTAL}||0)); # total amount of requested GPUs
 				$xenv->{LSB_HOSTS} =~ tr/a-zA-Z0-9 //cd; # ??
 				@lsb_hosts    = split(/ /,$xenv->{LSB_HOSTS});
 			}
 			
-			$self->xlog("$lpid runs on `@lsb_hosts' and requests $gpu_per_core GPU(s) per core");
+			$gpu_cnt_total ||= 1024; # FIXME: Compatibility hack with old bsub -> remove if new version is active
+			
+			$self->xlog("$lpid runs on `@lsb_hosts' and requests $gpu_per_core GPU(s) per core (job requested a total of $gpu_cnt_total GPUs)");
 			
 			foreach my $hostname (@lsb_hosts) {
-				$rcounter->{$hostname} += $gpu_per_core;
+				$gpu_cnt_total -= $gpu_per_core;
+				$rcounter->{$hostname} += $gpu_per_core if $gpu_cnt_total >= 0;
 			}
 			
 			$local_gdevs = ceil($rcounter->{$self->{hostname}});
