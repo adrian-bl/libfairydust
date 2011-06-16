@@ -310,9 +310,13 @@ package Adrian::Fairyd;
 			
 			$self->xlog("$lpid runs on `@lsb_hosts' and requests $gpu_per_core GPU(s) per core (job requested a total of $gpu_cnt_total GPUs)");
 			
-			foreach my $hostname (@lsb_hosts) {
-				$gpu_cnt_total -= $gpu_per_core;
-				$rcounter->{$hostname} += $gpu_per_core if $gpu_cnt_total >= 0;
+			map( $rcounter->{$_}++, @lsb_hosts); # count num-cpu's
+			foreach my $hostname (sort keys(%$rcounter)) {
+				my $rq_gpu = ceil($rcounter->{$hostname}*$gpu_per_core); # ceil -> we don't have 1/2 GPUs
+				   $rq_gpu = $gpu_cnt_total if $rq_gpu > $gpu_cnt_total;
+				
+				$rcounter->{$hostname} = $rq_gpu;
+				$gpu_cnt_total        -= $rq_gpu;
 			}
 			
 			$local_gdevs = ceil($rcounter->{$self->{hostname}});
