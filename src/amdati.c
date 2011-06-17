@@ -94,9 +94,21 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
 
 
 void _atidust_init() {
+	
 	if(reserved_devices[0] == FDUST_RSV_NINIT) {
 		__fdust_spam();
-		lock_fdust_devices(reserved_devices, FDUST_MODE_ATI);
+		
+		if(_get_number_of_ati_devices() == 0) {
+			
+			/* lock_fdust_devices() would die due to assert() if there is no ati hardware present.        *
+			 * but AMD's libOpenCL can also run on CPUs and therefore we can simply return 0 GPU devices  */
+			
+			reserved_devices[0] = FDUST_RSV_END;
+		}
+		else {
+			lock_fdust_devices(reserved_devices, FDUST_MODE_ATI);
+		}
+		
 		printf("%s allocated gpu-count: %d device(s)\n", __FILE__, _get_locked_gpu_count());
 	}
 }
