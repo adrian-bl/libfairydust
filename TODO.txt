@@ -1,0 +1,1 @@
+[ ] Make AMD-APP/STREAM OpenCL-init thread-safe
