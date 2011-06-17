@@ -9,8 +9,6 @@
 #include "common.h"
 #include <CL/cl.h>
 
-#define STREAM_DEVNAME_LEN 255 /* fixme */
-
 int reserved_devices[MAX_GPUCOUNT]       = { FDUST_RSV_NINIT };  /* map of reserved devices */
 
 

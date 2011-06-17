@@ -47,8 +47,12 @@ void lock_fdust_devices(int *rdevs, int opmode) {
 	
 	if( (env = getenv(FDUST_ALLOCATE)) != NULL) {
 		/* env was set but we cannot modify it: copy into scratch */
-		if( (scratch = malloc(strlen(env)+1)) != NULL )
+		if( (scratch = malloc(strlen(env)+1)) != NULL ) {
 			memcpy(scratch,env,strlen(env)+1);
+		}
+		else {
+			abort();
+		}
 	}
 	else {
 		/* must ask fairyd */
