@@ -33,6 +33,7 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
                                                       cl_uint        *num_devices) {
 	
 	static void     *(*ati_gdi) ();                      /* libOpenCL's version of clGetDeviceIDs */
+	static void     *ocl_lib             = NULL;         /* dlopen() of ocl-lib                   */
 	cl_uint         locked_gpus;                         /* number of GPUs we can use             */
 	cl_uint         rval                 = 0;            /* return value of dlsym() calls         */
 	cl_uint         i                    = 0;            /* generic loop counter                  */
@@ -42,8 +43,11 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
 	cl_device_id    total_handout_devs[MAX_GPUCOUNT];
 	
 	/* init call to libOpenCL */
-	if(!ati_gdi)
-		ati_gdi = (void *(*) ()) dlsym(RTLD_NEXT, __func__);
+	if(!ati_gdi) {
+		ocl_lib = dlopen("libOpenCL.so", RTLD_NOW);
+		assert(ocl_lib != NULL);
+		ati_gdi = (void *(*) ()) dlsym(ocl_lib, __func__);
+	}
 	
 	_atidust_init();
 	locked_gpus = _get_locked_gpu_count();
