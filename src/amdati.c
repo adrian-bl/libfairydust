@@ -52,7 +52,7 @@ extern CL_API_ENTRY cl_int CL_API_CALL clGetDeviceIDs(cl_platform_id platform   
 		goto CLEANUP;
 	
 	
-	if(device_type & CL_DEVICE_TYPE_GPU) {
+	if(device_type & CL_DEVICE_TYPE_GPU && locked_gpus != 0) {
 		rval = (long int)ati_gdi(platform, CL_DEVICE_TYPE_GPU, MAX_GPUCOUNT, scratch_handout_devs, &scratch_matched_devs);
 		if(rval != CL_SUCCESS)
 			goto CLEANUP;
