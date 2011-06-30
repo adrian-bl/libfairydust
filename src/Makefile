@@ -12,6 +12,10 @@ atidust: objdir amdati.o common.o
 	gcc -shared -Wl,-soname,libatidust.so.0 -o obj/libatidust.so.0 amdati.o common.o -lc -ldl
 	rm *.o
 
+32bit: objdir
+	gcc -m32 -shared -Wl,-soname,libatidust.so.0   -o obj/libatidust.so.0   fake.o -lc -ldl
+	gcc -m32 -shared -Wl,-soname,libfairydust.so.0 -o obj/libfairydust.so.0 fake.o -lc -ldl
+
 amdati.o:
 	gcc -fPIC -rdynamic -c -Wunused-value -Wunused-variable -Wall -I/usr/local/cuda/include -I$(CUDA_INSTALL_PATH)/include \
 	amdati.c
@@ -28,6 +32,9 @@ cuvisible.o:
 	gcc -fPIC -rdynamic -c -Wunused-value -Wunused-variable -Wall \
 	cuvisible.c
 
+fake.o:
+	gcc -m32 -fPIC -rdynamic -c -Wunused-value -Wunused-variable -Wall \
+	fake.c
 
 objdir:
 	rm -rf obj/
