@@ -12,7 +12,7 @@ atidust: objdir amdati.o common.o
 	gcc -shared -Wl,-soname,libatidust.so.0 -o obj/libatidust.so.0 amdati.o common.o -lc -ldl
 	rm *.o
 
-32bit: objdir
+32bit: objdir fake.o
 	gcc -m32 -shared -Wl,-soname,libatidust.so.0   -o obj/libatidust.so.0   fake.o -lc -ldl
 	gcc -m32 -shared -Wl,-soname,libfairydust.so.0 -o obj/libfairydust.so.0 fake.o -lc -ldl
 
